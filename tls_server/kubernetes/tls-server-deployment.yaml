@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tls-server
+spec:
+  selector:
+    matchLabels:
+      app: tls-server
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: tls-server
+    spec:
+      containers:
+      - name: tls-server
+        image: ahovgaard/stun-server:0.1.2
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "2.00"
+            memory: "512Mi"
+          requests:
+            cpu: "2.00"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command:
+            - /bin/true
+        livenessProbe:
+          exec:
+            command:
+            - /bin/true
+      securityContext:
+        runAsUser: 1000
