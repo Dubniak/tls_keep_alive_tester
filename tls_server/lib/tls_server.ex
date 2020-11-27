@@ -21,7 +21,6 @@ defmodule TLS_SERVER do
 
   defp ranch_opts(socket_opts), do: %{
     connection_type:      :supervisor,
-    # active:               :once,
     socket_opts:          socket_opts,
     max_connections:      3500,
     num_acceptors:        100,
@@ -33,6 +32,5 @@ defmodule TLS_SERVER do
   [
     port: 49665,
     tos: 0x88
-
   ]
 end

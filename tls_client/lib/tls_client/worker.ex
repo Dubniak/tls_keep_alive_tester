@@ -4,7 +4,7 @@ defmodule TLS_CLIENT.Worker do
 
   alias TLS_CLIENT.Client
 
-  @ka :timer.seconds(10) # milisecs
+  @ka :timer.seconds(5) # milisecs
 
   def start_link(args) do
     GenStateMachine.start_link(__MODULE__, args)
@@ -45,8 +45,9 @@ defmodule TLS_CLIENT.Worker do
   def handle_event({:timeout, :send_request}, _, :idle, data) do
     Logger.info("Wait for 60 seconds")
     ka_delay = @ka
-    # new_action = {{:timeout, :send_keep_alive}, @ka, nil}
-    {:next_state, :keep_alive, data, {{:timeout, :send_keep_alive}, 0, nil}}
+    new_action = {{:timeout, :send_keep_alive}, @ka, nil}
+    # new_action = {{:timeout, :send_keep_alive}, 0, nil}
+    {:next_state, :keep_alive, data, new_action}
     # {:keep_state_and_data, :postpone}
   end
 
