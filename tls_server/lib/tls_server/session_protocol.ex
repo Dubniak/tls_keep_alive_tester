@@ -7,7 +7,6 @@ defmodule TLS_SERVER.SessionProtocol  do
   GenServer.start_link(__MODULE__, [ref, socket, transport, opts])
 end
 
-
 def init([ref, socket, transport, opts]) do
   # Note: Because :ranch.handshake/1 is blocking, the init function must return instantly
   {:ok, {client_ip, port}} = :inet.peername(socket)
@@ -27,7 +26,7 @@ def init([ref, socket, transport, opts]) do
     radio_data:           nil,
     tcp_buffer:           <<>>
   }
-  # {:ok, state}
+  IO.inspect(self())
   {:ok, state, {:continue, :handshake}}
 end
 
@@ -39,22 +38,22 @@ def handle_continue(:handshake, state = %{socket: init_socket, ref: ref, transpo
   {:noreply, %{state | socket: socket}}
 end
 
-def handle_info(msg, state) do
-  Logger.info("Received #{inspect(msg)}")
-  {:noreply, state}
-end
+
 def handle_info({protocol_closed, reason}, state)
   when protocol_closed in [:tcp_closed, :ssl_closed] do
-Logger.debug "~p reason: ~p", [protocol_closed, reason]
+Logger.info "~p reason: ~p", [protocol_closed, reason]
 cleanup(state)
 {:stop, {:shutdown, protocol_closed}, state}
 end
-
-def handle_info({protocol, _, bin}, state = %{})
-  when protocol in [:tcp, :ssl] do
-Logger.debug "Received on ~p: ~p", [protocol, bin]
+def handle_info({protocol, _, bin}, state = %{}) do
+  # when protocol in [:tcp, :ssl] do
+Logger.info "Received on #{inspect(protocol)} #{inspect(bin)}"
 # tls_ready(transport, socket)
 {:noreply, state}
+end
+def handle_info(msg, state) do
+  Logger.info("Received #{inspect(msg)}")
+  {:noreply, state}
 end
 
 defp tls_ready(transport, socket), do: :ok = transport.setopts(socket, [active: :once])
