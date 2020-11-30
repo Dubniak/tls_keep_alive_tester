@@ -1,28 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tls-server
+  name: stun-client
 spec:
   selector:
     matchLabels:
-      app: tls-server
-  replicas: 2
+      app: stun-client
+  replicas: 5
   template:
     metadata:
       labels:
-        app: tls-server
+        app: stun-client
     spec:
       containers:
-      - name: tls-server
-        image: argmarios/tcp-server:latest
+      - name: stun-client
+        image: argmarios/tcp-client:0.1.11:latest
         imagePullPolicy: Always
+        env:
+        - name: TCP_SERVER_IP
+          value: "13.70.200.12"
+        - name: TCP_SERVER_PORT
+          value: "3478"
+        - name: TCP_CLIENT_COUNT
+          value: "6000"
         resources:
           limits:
             cpu: "2.00"
-            memory: "512Mi"
+            memory: "2048Mi"
           requests:
             cpu: "2.00"
-            memory: "512Mi"
+            memory: "2048Mi"
         readinessProbe:
           exec:
             command:

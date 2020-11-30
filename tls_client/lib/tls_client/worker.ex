@@ -69,6 +69,4 @@ defmodule TLS_CLIENT.Worker do
     Logger.error "Server terminated TCP connection, #{inspect(reason)}"
     {:stop, {:shutdown, protocol_closed}, state}
   end
-
-  defp tls_ready(_, socket), do: :ok = :inet.setopts(socket, [active: :true])
 end
