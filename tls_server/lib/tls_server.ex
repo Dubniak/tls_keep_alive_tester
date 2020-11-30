@@ -13,9 +13,9 @@ defmodule TLS_SERVER do
   end
 
   defp start_listener() do
-    Logger.debug "Starting TLS listener..."
+    Logger.info "Starting TCP listener..."
     opts = ranch_opts(common_socket_opts())
-    {:ok, _} = :ranch.start_listener(:Tcp, :ranch_tcp, opts, TLS_SERVER.SessionProtocol,cert_verification: false)
+    {:ok, _} = :ranch.start_listener(:Tcp, :ranch_tcp, opts, TLS_SERVER.SessionProtocol, cert_verification: false)
 
   end
 
@@ -25,7 +25,6 @@ defmodule TLS_SERVER do
     max_connections:      3500,
     num_acceptors:        100,
     handshake_timeout:    20000
-
   }
 
   defp common_socket_opts, do:
