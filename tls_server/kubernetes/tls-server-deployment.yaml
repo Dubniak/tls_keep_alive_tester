@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: tls-server
-        image: argmarios/tcp-server:latest
+        image: argmarios/tcp_server:latest
         imagePullPolicy: Always
         resources:
           limits:

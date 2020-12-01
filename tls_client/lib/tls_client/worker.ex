@@ -2,7 +2,7 @@ defmodule TLS_CLIENT.Worker do
   use GenStateMachine
   require Logger
 
-  @ka :timer.seconds(1) # seconds
+  @ka :timer.seconds(60) # seconds
 
   def start_link(args) do
     GenStateMachine.start_link(__MODULE__, args)

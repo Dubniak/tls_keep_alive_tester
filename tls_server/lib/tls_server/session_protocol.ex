@@ -2,7 +2,7 @@ defmodule TLS_SERVER.SessionProtocol  do
   use GenServer
   require Logger
 
-  @tls_it :timer.seconds(5)   #tls_inactivity_threshold
+  @tls_it :timer.seconds(80)   #tls_inactivity_threshold
 
   def start_link(ref, socket, transport, opts) do
     GenServer.start_link(__MODULE__, [ref, socket, transport, opts])
