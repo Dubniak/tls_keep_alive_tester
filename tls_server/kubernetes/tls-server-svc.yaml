@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: tls-server-svc
 spec:
-  loadBalancerIP:  13.70.200.12
+  # loadBalancerIP:  13.70.200.12
   externalTrafficPolicy: Local
   type: LoadBalancer
   ports:
