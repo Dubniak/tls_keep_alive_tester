@@ -2,7 +2,7 @@ defmodule TLS_SERVER.SessionProtocol  do
   use GenServer
   require Logger
 
-  @tls_it :timer.seconds(80)   #tls_inactivity_threshold
+  @tls_it :timer.seconds(8)   #tls_inactivity_threshold
 
   def start_link(ref, socket, transport, opts) do
     GenServer.start_link(__MODULE__, [ref, socket, transport, opts])
@@ -44,7 +44,6 @@ defmodule TLS_SERVER.SessionProtocol  do
     cond do
       msg == "Keep Alive"
                           -> Logger.info "R: #{inspect(msg)}, client port #{inspect(client_port)} #{inspect(protocol)}"
-                            # RESET TIMER HERE
                              new_state = timer_reset(state)
                              :gen_tcp.send(socket, "Keep Alive Response")
                              Logger.info("S: Keep Alive Response to #{inspect(client_port)}")

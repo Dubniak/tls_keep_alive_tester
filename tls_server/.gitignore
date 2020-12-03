@@ -22,6 +22,7 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 tls_server-*.tar
 
+*.pub
 
 # Temporary files for e.g. tests
 /tmp
