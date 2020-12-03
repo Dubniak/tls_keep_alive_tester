@@ -2,8 +2,8 @@ defmodule TLS_CLIENT.Worker do
   use GenStateMachine
   require Logger
 
-  @ka :timer.seconds(6)             #time between consequent Keep Alive requests
-  @ka_timeout :timer.seconds(8)     #time upon clossing hanging connection
+  @ka :timer.seconds(60)             #time between consequent Keep Alive requests
+  @ka_timeout :timer.seconds(80)     #time upon clossing hanging connection
 
   def start_link(args) do
     GenStateMachine.start_link(__MODULE__, args)
