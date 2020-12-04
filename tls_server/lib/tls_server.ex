@@ -22,7 +22,7 @@ defmodule TLS_SERVER do
   defp ranch_opts(socket_opts), do: %{
     connection_type:      :supervisor,
     socket_opts:          socket_opts,
-    max_connections:      4000,
+    max_connections:      16000,
     num_acceptors:        100,
     handshake_timeout:    20000
   }

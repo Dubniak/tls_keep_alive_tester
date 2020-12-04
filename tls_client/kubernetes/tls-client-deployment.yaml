@@ -22,7 +22,7 @@ spec:
         - name: TCP_SERVER_PORT
           value: "49665"
         - name: TCP_CLIENT_COUNT
-          value: "1550"
+          value: "3000"
         resources:
           limits:
             cpu: "2.00"
