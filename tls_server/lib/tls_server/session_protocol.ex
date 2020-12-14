@@ -2,12 +2,12 @@ defmodule TLS_SERVER.SessionProtocol  do
   use GenServer
   require Logger
 
-  @tls_it :timer.seconds(20)   #tls_inactivity_threshold
+  @tls_it :timer.seconds(10)   #tls_inactivity_threshold
 
   @short_msg  << "Short message reply",
                   256   :: size(256) >>   # bit_size 408
   @long_msg   << "Long message reply",
-                  1024   :: size(1024) >>  # bit size 1168
+                  1024   :: size(1024) >>  # bit_size 1168
 
   def start_link(ref, socket, transport, opts) do
     GenServer.start_link(__MODULE__, [ref, socket, transport, opts])
@@ -19,63 +19,65 @@ defmodule TLS_SERVER.SessionProtocol  do
 
   def init([ref, socket, transport, _opts]) do
     {:ok, {client_ip, port}} = :inet.peername(socket)
-    Logger.info("New TCP connection attempt #{inspect(client_ip)} #{port}")
+    Logger.info("New TCP connection attempt #{inspect(client_ip)}:#{port}")
     state = %{
       ref:                  ref,
       socket:               socket,
       transport:            transport,
       client_port:          port,
+      client_ip:            client_ip,
       timer:                nil
     }
     {:ok, state, {:continue, :handshake}}
   end
 
-  def handle_continue(:handshake, state = %{ref: ref, transport: transport, client_port: client_port}) do
+  def handle_continue(:handshake, state = %{ref: ref, transport: transport, client_port: client_port, client_ip: client_ip}) do
     {:ok, socket} = :ranch.handshake(ref)
-    Logger.debug("Handshake succesful, client port #{inspect(client_port)}")
+    Logger.debug("Handshake succesful #{inspect(client_ip)}:#{inspect(client_port)}")
     new_state = timer_reset(state)
     tls_ready(transport, socket)
     {:noreply, %{new_state | socket: socket}}
   end
 
-  def handle_info({protocol_closed, reason}, state)
+  def handle_info({protocol_closed, _reason}, state = %{client_port: client_port, client_ip: client_ip})
     when protocol_closed in [:tcp_closed, :ssl_closed] do
-    Logger.info "Terminating TCP connection, client port #{inspect(state.client_port)}, #{inspect(reason)}"
-    cleanup(state)
-    {:stop, {:shutdown, protocol_closed}, state}
-  end
+  Logger.info "Terminating TCP connection from #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol_closed)} "
+  cleanup(state)
+  {:stop, {:shutdown, protocol_closed}, state}
+end
 
-  def handle_info({protocol, _, msg}, state = %{socket: socket, client_port: client_port}) do
+  def handle_info({protocol, _, msg}, state = %{socket: socket, client_port: client_port, client_ip: client_ip}) do
     cond do
       msg == "Keep Alive"
-                          -> Logger.debug "R: #{inspect(msg)}, client port #{inspect(client_port)} #{inspect(protocol)}"
+                          -> Logger.debug "R: #{inspect(msg)}, from #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}"
                              new_state = timer_reset(state)
                              :gen_tcp.send(socket, "Keep Alive Response") #add :ok
-                             Logger.debug("S: Keep Alive Response to #{inspect(client_port)}")
+                             Logger.debug("S: Keep Alive Response to #{inspect(client_ip)}:#{inspect(client_port)}")
                              {:noreply, new_state}
       msg == "Establish Session"
-                          -> Logger.debug("R: #{inspect(msg)}, client port #{inspect(client_port)} #{inspect(protocol)}")
+                          -> Logger.debug("R: #{inspect(msg)}, from #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
                           {:noreply, state}
       true
                           ->
                               case bit_size(msg) do
                                 360   ->
-                                  Logger.debug("S: Short message reply, client port #{inspect(client_port)} #{inspect(protocol)}")
+                                  Logger.debug("S: Short message reply, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
                                   :gen_tcp.send(socket, @short_msg)
                                 1120  ->
-                                  Logger.debug("S: Long message reply, client port #{inspect(client_port)} #{inspect(protocol)}")
+                                  Logger.debug("S: Long message reply, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
                                   :gen_tcp.send(socket, @long_msg)
                                 n when n in [496, 1256] ->
                                   Logger.debug("R: Handshake message")
                                 _     ->
-                                  Logger.error("R: #{inspect(msg)}, client port #{inspect(client_port)} #{inspect(protocol)}")
+                                  Logger.error("R: #{inspect(msg)}, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
                               end
                           {:noreply, state}
     end
   end
 
-  def handle_info(:close_hanging_connection, state = %{socket: socket, client_port: client_port}) do
-    Logger.error("Closing connection on socket #{inspect(socket)}, client port #{inspect(client_port)}")
+  def handle_info(:close_hanging_connection, state = %{socket: socket, client_port: client_port, client_ip: client_ip}) do
+    Logger.error("Keep alive request not received #{inspect(client_ip)}:#{inspect(client_port)}, #{inspect(socket)}")
+    Logger.info("Terminating TCP connection from #{inspect(client_ip)}:#{inspect(client_port)} :keep_alive_missing")
     {:stop, :shutdown, cleanup(state)}
   end
 
@@ -94,9 +96,9 @@ defmodule TLS_SERVER.SessionProtocol  do
 
   defp tls_ready(transport, socket), do: :ok = transport.setopts(socket, [active: :true])
 
-  defp cleanup(_state = %{transport: tr, socket: socket, client_port: client_port}) do
+  defp cleanup(_state = %{transport: tr, socket: socket, client_port: client_port, client_ip: client_ip}) do
     _ok = tr.close(socket)
-    Logger.debug("Cleanning up socket #{inspect(socket)}, client port #{inspect(client_port)}")
+    Logger.debug("Cleanning up socket #{inspect(socket)}, #{inspect(client_ip)}:#{inspect(client_port)}")
   end
   defp cleanup(_state) do
     # Client shut down

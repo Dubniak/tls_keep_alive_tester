@@ -18,10 +18,10 @@ spec:
         imagePullPolicy: Always
         resources:
           limits:
-            cpu: "2.00"
+            cpu: "1.50"
             memory: "512Mi"
           requests:
-            cpu: "2.00"
+            cpu: "1.50"
             memory: "512Mi"
         readinessProbe:
           exec:
@@ -31,5 +31,7 @@ spec:
           exec:
             command:
             - /bin/true
+      nodeSelector:
+        disktype: extra
       securityContext:
         runAsUser: 1000

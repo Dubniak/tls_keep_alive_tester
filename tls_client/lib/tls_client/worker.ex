@@ -2,13 +2,14 @@ defmodule TLS_CLIENT.Worker do
   use GenStateMachine
   require Logger
 
-  @ka :timer.seconds(10)             #time between consequent Keep Alive requests
-  @ka_timeout :timer.seconds(20)     #time upon clossing hanging connection
+  @ka :timer.seconds(5)               #time between consequent Keep Alive requests
+  @ka_timeout :timer.seconds(10)      #time upon clossing hanging connection
+  @setup_delay :timer.seconds(60)     #delay when spawining connections
 
   @short_msg  << "Short message",
                     256   :: size(256) >>   # bit_size 360
   @long_msg   << "Long message",
-                    1024   :: size(1024) >>  # bit size 1120
+                    1024   :: size(1024) >>  # bit_size 1120
 
   def start_link(args) do
     GenStateMachine.start_link(__MODULE__, args)
@@ -22,17 +23,17 @@ defmodule TLS_CLIENT.Worker do
       client_id:    Keyword.get(args, :client_id),
       socket:       nil
     }
-    init_delay = :rand.uniform(@ka)
+    init_delay = :rand.uniform(@setup_delay)
     action = {{:timeout, :init}, init_delay, nil}
     {:ok, :init, data, action}
   end
 
   @impl true
   def handle_event({:timeout, :init}, _, _state, data) do
-    Logger.debug("Initialising client socket, client_id: #{(data.client_id)}")
+    Logger.debug("Client #{inspect(data.client_id)}:Initialising client socket")
     case :gen_tcp.connect(data.server_ip, data.server_port, [:binary, {:active, true}]) do
       {:ok, soc}      -> {:next_state, :open_socket, %{data | socket: soc}, {{:timeout, :send_request}, 0, nil}}
-      {:error, error} ->  Logger.error("Error initialising client socket #{inspect(error)}")
+      {:error, error} ->  Logger.error("Client #{inspect(data.client_id)}: Error initialising client socket #{inspect(error)}")
                           action = {{:timeout, :init}, :rand.uniform(@ka), nil}
                           {:keep_state_and_data, action}
     end
@@ -85,15 +86,15 @@ defmodule TLS_CLIENT.Worker do
   # Timeout for hanging connections
   @impl true
   def handle_event(:state_timeout, :hold_timeout, :keep_alive, data) do
-    Logger.error("Keep Alive response not received. Closing connection")
+    Logger.error("Client #{inspect(data.client_id)}: Keep Alive response not received. Closing connection")
     :gen_tcp.close(data.socket)
     action = {{:timeout, :init}, 0, nil}
     {:next_state, :init, data, action}
   end
 
   @impl true
-  def handle_event(:info, {protocol_closed, reason}, state, _data) do
-    Logger.error "Server terminated TCP connection, #{inspect(reason)}"
+  def handle_event(:info, {protocol_closed, reason}, state, data) do
+    Logger.error "Client #{inspect(data.client_id)}: Server terminated TCP connection, #{inspect(reason)}"
     {:stop, {:shutdown, protocol_closed}, state}
   end
 end
