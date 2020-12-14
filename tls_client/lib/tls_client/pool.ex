@@ -23,7 +23,7 @@ defmodule TLS_CLIENT.Pool do
       |> :inet.parse_ipv4_address()
 
     server_port = 49665
-    num_clients = 1500
+    num_clients = 1
 
     worker_args = [server_ip: server_ip, server_port: server_port]
     children = Enum.map(1..num_clients, &(worker_spec(&1, worker_args)))

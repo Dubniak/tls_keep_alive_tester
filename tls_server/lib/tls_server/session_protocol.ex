@@ -18,7 +18,7 @@ defmodule TLS_SERVER.SessionProtocol  do
   end
 
   def init([ref, socket, transport, _opts]) do
-    {:ok, {client_ip, port}} = :inet.peername(socket)
+    {:ok, {client_ip, port}} = :ssl.peername(socket)
     Logger.info("New TCP connection attempt #{inspect(client_ip)}:#{port}")
     state = %{
       ref:                  ref,
@@ -51,7 +51,7 @@ end
       msg == "Keep Alive"
                           -> Logger.debug "R: #{inspect(msg)}, from #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}"
                              new_state = timer_reset(state)
-                             :gen_tcp.send(socket, "Keep Alive Response") #add :ok
+                             :ssl.send(socket, "Keep Alive Response") #add :ok
                              Logger.debug("S: Keep Alive Response to #{inspect(client_ip)}:#{inspect(client_port)}")
                              {:noreply, new_state}
       msg == "Establish Session"
@@ -62,10 +62,10 @@ end
                               case bit_size(msg) do
                                 360   ->
                                   Logger.debug("S: Short message reply, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
-                                  :gen_tcp.send(socket, @short_msg)
+                                  :ssl.send(socket, @short_msg)
                                 1120  ->
                                   Logger.debug("S: Long message reply, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
-                                  :gen_tcp.send(socket, @long_msg)
+                                  :ssl.send(socket, @long_msg)
                                 n when n in [496, 1256] ->
                                   Logger.debug("R: Handshake message")
                                 _     ->

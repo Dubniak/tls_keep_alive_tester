@@ -4,7 +4,7 @@ defmodule TLS_CLIENT.Worker do
 
   @ka :timer.seconds(5)               #time between consequent Keep Alive requests
   @ka_timeout :timer.seconds(10)      #time upon clossing hanging connection
-  @setup_delay :timer.seconds(60)     #delay when spawining connections
+  @setup_delay :timer.seconds(5)     #delay when spawining connections
 
   @short_msg  << "Short message",
                     256   :: size(256) >>   # bit_size 360
@@ -31,7 +31,8 @@ defmodule TLS_CLIENT.Worker do
   @impl true
   def handle_event({:timeout, :init}, _, _state, data) do
     Logger.debug("Client #{inspect(data.client_id)}:Initialising client socket")
-    case :gen_tcp.connect(data.server_ip, data.server_port, [:binary, {:active, true}]) do
+    case :ssl.connect(data.server_ip, data.server_port, [versions: [:"tlsv1.2"], server_name_indication: :disable], 400) do
+    # case :ssl.connect(data.server_ip, data.server_port, [:binary, {:active, true}]) do
       {:ok, soc}      -> {:next_state, :open_socket, %{data | socket: soc}, {{:timeout, :send_request}, 0, nil}}
       {:error, error} ->  Logger.error("Client #{inspect(data.client_id)}: Error initialising client socket #{inspect(error)}")
                           action = {{:timeout, :init}, :rand.uniform(@ka), nil}
@@ -40,7 +41,7 @@ defmodule TLS_CLIENT.Worker do
   end
 
   @impl true
-  def handle_event(:info, {:tcp, _socket, msg}, :keep_alive, data) do
+  def handle_event(:info, {:ssl, _socket, msg}, :keep_alive, data) do
     cond do
       msg == "Keep Alive Response" ->
               Logger.debug("Received #{inspect(msg)}")
@@ -59,7 +60,7 @@ defmodule TLS_CLIENT.Worker do
   @impl true
   def handle_event({:timeout, :send_request}, _, :open_socket,  data) do
     Logger.debug("Establishing TCP session")
-    :ok = :gen_tcp.send(data.socket, "Establish Session")
+    :ok = :ssl.send(data.socket, "Establish Session")
     {:next_state, :idle, data, {{:timeout, :send_request}, 0, nil}}
   end
 
@@ -67,8 +68,8 @@ defmodule TLS_CLIENT.Worker do
   def handle_event({:timeout, :send_request}, _, :idle, data) do
     Logger.debug("Waiting for #{inspect(@ka)} miliseconds")
     case rem(:rand.uniform(@ka_timeout), 2) do
-      1   -> :ok = :gen_tcp.send(data.socket, @long_msg)
-      0   -> :ok = :gen_tcp.send(data.socket, @short_msg)
+      1   -> :ok = :ssl.send(data.socket, @long_msg)
+      0   -> :ok = :ssl.send(data.socket, @short_msg)
     end
     new_action = {{:timeout, :send_keep_alive}, @ka, nil}
     {:next_state, :keep_alive, data, [new_action,{:state_timeout, @ka_timeout, :hold_timeout}]}
@@ -77,7 +78,7 @@ defmodule TLS_CLIENT.Worker do
   @impl true
   def handle_event({:timeout, :send_keep_alive}, _, :keep_alive, data) do
     Logger.debug("Sending keep alive")
-    :ok = :gen_tcp.send(data.socket, "Keep Alive")
+    :ok = :ssl.send(data.socket, "Keep Alive")
     :timer.sleep(1000)
     new_action = {{:timeout, :send_request}, 0, nil}
     {:next_state, :idle, data, new_action}
@@ -87,7 +88,7 @@ defmodule TLS_CLIENT.Worker do
   @impl true
   def handle_event(:state_timeout, :hold_timeout, :keep_alive, data) do
     Logger.error("Client #{inspect(data.client_id)}: Keep Alive response not received. Closing connection")
-    :gen_tcp.close(data.socket)
+    :ssl.close(data.socket)
     action = {{:timeout, :init}, 0, nil}
     {:next_state, :init, data, action}
   end
