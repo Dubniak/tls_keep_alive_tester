@@ -14,15 +14,15 @@ spec:
     spec:
       containers:
       - name: tls-client
-        image: argmarios/tcp_client:latest
+        image: argmarios/tls_client:latest
         imagePullPolicy: Always
         env:
         - name: TCP_SERVER_IP
-          value: "40.113.4.234"
+          value: "52.146.50.96"
         - name: TCP_SERVER_PORT
           value: "49665"
         - name: TCP_CLIENT_COUNT
-          value: "6000"
+          value: "3000"
         resources:
           limits:
             cpu: "2.00"

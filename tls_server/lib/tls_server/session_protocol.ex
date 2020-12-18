@@ -19,7 +19,7 @@ defmodule TLS_SERVER.SessionProtocol  do
 
   def init([ref, socket, transport, _opts]) do
     {:ok, {client_ip, port}} = :ssl.peername(socket)
-    Logger.info("New TCP connection attempt #{inspect(client_ip)}:#{port}")
+    Logger.info("New TLS connection attempt #{inspect(client_ip)}:#{port}")
     state = %{
       ref:                  ref,
       socket:               socket,
@@ -41,7 +41,7 @@ defmodule TLS_SERVER.SessionProtocol  do
 
   def handle_info({protocol_closed, _reason}, state = %{client_port: client_port, client_ip: client_ip})
     when protocol_closed in [:tcp_closed, :ssl_closed] do
-  Logger.info "Terminating TCP connection from #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol_closed)} "
+  Logger.info "Terminating TLS connection from #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol_closed)} "
   cleanup(state)
   {:stop, {:shutdown, protocol_closed}, state}
 end
@@ -62,10 +62,10 @@ end
                               case bit_size(msg) do
                                 360   ->
                                   Logger.debug("S: Short message reply, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
-                                  :ssl.send(socket, @short_msg)
+                                  # :ssl.send(socket, @short_msg)
                                 1120  ->
                                   Logger.debug("S: Long message reply, #{inspect(client_ip)}:#{inspect(client_port)} #{inspect(protocol)}")
-                                  :ssl.send(socket, @long_msg)
+                                  # :ssl.send(socket, @long_msg)
                                 n when n in [496, 1256] ->
                                   Logger.debug("R: Handshake message")
                                 _     ->
@@ -75,8 +75,8 @@ end
     end
   end
 
-  def handle_info(:close_hanging_connection, state = %{socket: socket, client_port: client_port, client_ip: client_ip}) do
-    Logger.error("Keep alive request not received #{inspect(client_ip)}:#{inspect(client_port)}, #{inspect(socket)}")
+  def handle_info(:close_hanging_connection, state = %{client_port: client_port, client_ip: client_ip}) do
+    Logger.error("Keep alive request not received #{inspect(client_ip)}:#{inspect(client_port)}")
     Logger.info("Terminating TCP connection from #{inspect(client_ip)}:#{inspect(client_port)} :keep_alive_missing")
     {:stop, :shutdown, cleanup(state)}
   end

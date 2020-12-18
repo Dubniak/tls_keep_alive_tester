@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: tls-server
-        image: argmarios/tcp_server:latest
+        image: argmarios/tls_server:latest
         imagePullPolicy: Always
         resources:
           limits:
@@ -31,7 +31,7 @@ spec:
           exec:
             command:
             - /bin/true
-      nodeSelector:
-        disktype: extra
+      # nodeSelector:
+      #   disktype: extra
       securityContext:
         runAsUser: 1000
